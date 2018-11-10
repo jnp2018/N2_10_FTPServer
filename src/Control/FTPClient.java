@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JProgressBar;
 import javax.swing.JTextArea;
@@ -60,15 +61,20 @@ public class FTPClient extends Thread {
 
     String action = "";
 
+    JComboBox jcb = new JComboBox();
     JTextArea jta = new JTextArea();
     JProgressBar jpb = new JProgressBar();
     JLabel jlabel = new JLabel();
+
+    // Init
+    public void setJcb(JComboBox jcb) {
+        this.jcb = jcb;
+    }
 
     public void setJlabel(JLabel jlabel) {
         this.jlabel = jlabel;
     }
 
-    // Init
     public void setJLbData(String message) {
         jlabel.setText(message);
     }
@@ -204,6 +210,10 @@ public class FTPClient extends Thread {
     public void sendData(File file_to_send) {
         try {
             setJtaData("Sending file");
+            
+            String running_thread = currentThread().getId() + "| Action : " + action + " : " + file_to_read;
+            jcb.addItem(running_thread);
+            
             fin = new FileInputStream(file_to_send);
             bin = new BufferedInputStream(fin);
             byte[] buffer = null;
@@ -279,6 +289,9 @@ public class FTPClient extends Thread {
             fout = new FileOutputStream(des_file);
             bout = new BufferedOutputStream(fout);
 
+            String running_thread = currentThread().getId() + "| Action : " + action + " : " + file_to_read;
+            jcb.addItem(running_thread);
+
             String fileLen = din.readUTF();
             long file_length = new Long(fileLen);
             long current = 0;
@@ -321,6 +334,7 @@ public class FTPClient extends Thread {
         setJLbData(times);
     }
 
+    // Run
     @Override
     public void run() {
         if ("Login".equals(action)) {
@@ -330,7 +344,6 @@ public class FTPClient extends Thread {
             }
         } else if (isLogin && action != null) {
             initClient();
-
             if ("Show File".equals(action)) {
                 try {
                     setJtaData("Show file");
