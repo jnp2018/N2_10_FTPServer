@@ -122,29 +122,40 @@ public class FTPServer extends Thread {
     public void receiveFile() {
         try {
             String file_path = din.readUTF();
+            File file = new File(file_path);
             boolean is_allow_file = isAllowFile(file_path);
+
+            // Init for write log
+            String status = "Reject";
+            String file_action = "upload file";
+
             if (is_allow_file) {
                 setJtaData("Client add file : " + file_path);
-                File file = new File(file_path);
-                receiveData(file);
-                setJtaData("Receive file success");
+
+                try {
+                    if (receiveData(file)) {
+                        setJtaData("Receive file success");
+                        status = "Success";
+                        actionLog(file_action, file_path, status);
+                    } else {
+                        status = "Not finished";
+                        actionLog(file_action, file_path, status);
+                    }
+                } catch (Exception e) {
+                    setJtaData("Create file error");
+                }
+
             } else {
                 setJtaData("Server not allow to receive this file :" + file_path);
+                actionLog(file_action, file_path, status);
             }
-
-            String status = "Reject";
-            if (is_allow_file) {
-                status = "Success";
-            }
-            String file_action = "upload file";
-            actionLog(file_action, file_path, status);
             client.close();
         } catch (IOException ex) {
             System.out.println("Error : " + ex.getMessage());
         }
     }
 
-    public void receiveData(File file) {
+    public boolean receiveData(File file) {
         System.out.println("Runned");
         try {
             fout = new FileOutputStream(file);
@@ -160,9 +171,11 @@ public class FTPServer extends Thread {
             }
             bout.close();
             fout.close();
+            return true;
         } catch (IOException ex) {
             System.out.println("Error : " + ex.getMessage());
         }
+        return false;
     }
 
     public void sendFile() {
@@ -170,29 +183,37 @@ public class FTPServer extends Thread {
             String file_to_send_path = din.readUTF();
             setJtaData("Client want to receive file : " + file_to_send_path);
 
-            boolean is_allow_file = isAllowFile(file_to_send_path);
-            if (is_allow_file) {;
-                File file_to_send = new File(file_to_send_path);
-                sendData(file_to_send);
-                setJtaData("Send file complete!");
+            // Init to write log
+            String status = "Reject";
+            String file_action = "upload file";
+
+            boolean is_allow_file = false;
+            File file_to_send = new File(file_to_send_path);
+            if (file_to_send.exists()) {
+                is_allow_file = isAllowFile(file_to_send_path);
             } else {
-                setJtaData("Server not allow to send this file : " + file_to_send_path);
+                dout.writeUTF(reject);
             }
 
-            // Log file
-            String status = "Reject";
             if (is_allow_file) {
-                status = "Success";
+                if (sendData(file_to_send)) {
+                    status = "Success";
+                    actionLog(file_action, file_to_send_path, status);
+                } else {
+                    status = "Not finished";
+                    actionLog(file_action, file_to_send_path, status);
+                }
+            } else {
+                setJtaData("Server not allow to send this file : " + file_to_send_path);
+                actionLog(file_action, file_to_send_path, status);
             }
-            String file_action = "upload file";
-            actionLog(file_action, file_to_send_path, status);
             client.close();
         } catch (IOException ex) {
             System.out.println("Error : " + ex.getMessage());
         }
     }
 
-    public void sendData(File file_to_send) {
+    public boolean sendData(File file_to_send) {
         setJtaData("Sending ...");
         try {
             fin = new FileInputStream(file_to_send);
@@ -217,12 +238,15 @@ public class FTPServer extends Thread {
                 bin.read(buffer, 0, size);
                 ostream.write(buffer);
             }
+            setJtaData("Send file complete!");
             ostream.flush();
             bin.close();
             fin.close();
+            return true;
         } catch (IOException ex) {
             System.out.println("Error : " + ex.getMessage());
         }
+        return false;
     }
 
     public boolean isAllowFile(String file_path) {
