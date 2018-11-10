@@ -164,18 +164,22 @@ public class FTPClient extends Thread {
     // Send file
     public void sendFile() {
         try {
-
             File file_to_send = new File(file_to_read);
-
-            boolean allowed_send = isAllowSend();
-            if (allowed_send) {
-                sendData(file_to_send);
+            if (file_to_send.exists()) {
+                boolean allowed_send = isAllowSend();
+                if (allowed_send) {
+                    sendData(file_to_send);
+                } else {
+                    setJtaData("Server not allow you to send your file");
+                }
+                client.close();
             } else {
-                setJtaData("Server not allow you to send your file");
+                setJtaData("File path error");
+                client.close();
             }
-            client.close();
+
         } catch (IOException ex) {
-            System.out.println("Error : " + ex.getMessage());
+            setJtaData("An error occur");
         }
     }
 
@@ -240,12 +244,14 @@ public class FTPClient extends Thread {
             if (is_allowed_receive) {
                 String file_path = file_to_write;
                 File des_to_receive = new File(file_path);
+
                 receiveData(des_to_receive);
                 setJtaData("Receive Success");
+                client.close();
+
             } else {
                 setJtaData("Server not allow you to receive this file");
             }
-            client.close();
         } catch (IOException ex) {
             System.out.println("Error : " + ex.getMessage());
         }
