@@ -39,7 +39,7 @@ public class FTPClient extends Thread {
 
     String userName = "";
     String password = "";
-    boolean isLogin = false;
+    static boolean isLogin = false;
 
     String file_to_read;
     String file_to_write;
@@ -128,6 +128,12 @@ public class FTPClient extends Thread {
     // Login 
     public boolean login() {
         try {
+            client = new Socket(host, port);
+            oout = new ObjectOutputStream(client.getOutputStream());
+            din = new DataInputStream(client.getInputStream());
+            dout = new DataOutputStream(client.getOutputStream());
+
+            dout.writeUTF("Login");
             User user = new User(userName, password);
             oout.writeObject((Object) user);
 
@@ -278,7 +284,7 @@ public class FTPClient extends Thread {
                 bout.write(contents, 0, byte_to_read);
                 current += byte_to_read;
                 sleep(100);
-                
+
                 caculateTime(current, file_length, size);
             }
             istream.close();
@@ -298,8 +304,8 @@ public class FTPClient extends Thread {
         // Set time left
         long timesSend = (file_length - current) / size;
 
-            // Assume the sending time is 100ms for size 1000000
-            // So total time : 200 ms => can send 5 times in a second
+        // Assume the sending time is 100ms for size 1000000
+        // So total time : 200 ms => can send 5 times in a second
         int timesInSecond = (int) (timesSend / 5);
         int minutes = (int) (timesInSecond / 60);
         int seconds = (int) (timesInSecond - minutes * 60);
@@ -310,41 +316,41 @@ public class FTPClient extends Thread {
 
     @Override
     public void run() {
-        initClient();
         if ("Login".equals(action)) {
             setJtaData("Login");
-            try {
-                dout.writeUTF("Login");
-                if (login()) {
-                    isLogin = true;
+            if (login()) {
+                isLogin = true;
+            }
+        } else if (isLogin && action != null) {
+            initClient();
+
+            if ("Show File".equals(action)) {
+                try {
+                    setJtaData("Show file");
+                    dout.writeUTF("Show File");
+                    showServerFile();
+                } catch (IOException ex) {
+                    Logger.getLogger(FTPClient.class.getName()).log(Level.SEVERE, null, ex);
                 }
-            } catch (IOException ex) {
-                System.out.println("Error : " + ex.getMessage());
+            } else if ("Send".equals(action)) {
+                try {
+                    setJtaData("Send file");
+                    dout.writeUTF("Send");
+                    sendFile();
+                } catch (IOException ex) {
+                    Logger.getLogger(FTPClient.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            } else if ("Receive".equals(action)) {
+                try {
+                    setJtaData("Receive file");
+                    dout.writeUTF("Receive");
+                    receiveFile();
+                } catch (IOException ex) {
+                    Logger.getLogger(FTPClient.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
-        } else if ("Show File".equals(action)) {
-            try {
-                setJtaData("Show file");
-                dout.writeUTF("Show File");
-                showServerFile();
-            } catch (IOException ex) {
-                Logger.getLogger(FTPClient.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        } else if ("Send".equals(action)) {
-            try {
-                setJtaData("Send file");
-                dout.writeUTF("Send");
-                sendFile();
-            } catch (IOException ex) {
-                Logger.getLogger(FTPClient.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        } else if ("Receive".equals(action)) {
-            try {
-                setJtaData("Receive file");
-                dout.writeUTF("Receive");
-                receiveFile();
-            } catch (IOException ex) {
-                Logger.getLogger(FTPClient.class.getName()).log(Level.SEVERE, null, ex);
-            }
+        } else if (action != null && !isLogin) {
+            setJtaData("You must login to do this");
         }
     }
 }
