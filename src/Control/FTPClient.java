@@ -6,6 +6,7 @@
 package Control;
 
 import Model.User;
+import View.ClientFrm;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -24,8 +25,10 @@ import java.util.Date;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JTextArea;
 
@@ -61,14 +64,19 @@ public class FTPClient extends Thread {
 
     String action = "";
 
-    JComboBox jcb = new JComboBox();
     JTextArea jta = new JTextArea();
     JProgressBar jpb = new JProgressBar();
     JLabel jlabel = new JLabel();
+    JButton jbutton = new JButton();
+    JPanel jPanel = new JPanel();
 
     // Init
-    public void setJcb(JComboBox jcb) {
-        this.jcb = jcb;
+    public void setjPanel(JPanel jPanel) {
+        this.jPanel = jPanel;
+    }
+
+    public void setJbutton(JButton jbutton) {
+        this.jbutton = jbutton;
     }
 
     public void setJlabel(JLabel jlabel) {
@@ -117,6 +125,19 @@ public class FTPClient extends Thread {
 
     public void setFile_to_write(String file_to_write) {
         this.file_to_write = file_to_write;
+    }
+
+    // Show component when send or receive file: Jprogress bar, JLabel, JButton
+    public void showOrCloseComponent(String status) {
+        if ("close".equals(status)) {
+            jPanel.remove(jpb);
+            jPanel.remove(jlabel);
+            jPanel.remove(jbutton);
+        } else {
+            jpb.setVisible(true);
+            jlabel.setVisible(true);
+            jbutton.setVisible(true);
+        }
     }
 
     public void initClient() {
@@ -177,6 +198,8 @@ public class FTPClient extends Thread {
                     sendData(file_to_send);
                 } else {
                     setJtaData("Server not allow you to send your file");
+                    showOrCloseComponent("close");
+                    ClientFrm.countThread--;
                 }
                 client.close();
             } else {
@@ -210,10 +233,9 @@ public class FTPClient extends Thread {
     public void sendData(File file_to_send) {
         try {
             setJtaData("Sending file");
-            
-            String running_thread = currentThread().getId() + "| Action : " + action + " : " + file_to_read;
-            jcb.addItem(running_thread);
-            
+            // Show copponent
+            showOrCloseComponent("show");
+
             fin = new FileInputStream(file_to_send);
             bin = new BufferedInputStream(fin);
             byte[] buffer = null;
@@ -238,7 +260,10 @@ public class FTPClient extends Thread {
                 caculateTime(current, file_length, size);
                 sleep(100);
             }
+            //close component
+            showOrCloseComponent("close");
             setJtaData("Sending finish");
+            ClientFrm.countThread--;
             ostream.flush();
             fin.close();
             bin.close();
@@ -261,6 +286,8 @@ public class FTPClient extends Thread {
 
             } else {
                 setJtaData("Server not allow you to receive this file");
+                showOrCloseComponent("close");
+                ClientFrm.countThread--;
             }
         } catch (IOException ex) {
             System.out.println("Error : " + ex.getMessage());
@@ -286,11 +313,11 @@ public class FTPClient extends Thread {
 
     public void receiveData(File des_file) {
         try {
+            // Show copponent
+            showOrCloseComponent("show");
+
             fout = new FileOutputStream(des_file);
             bout = new BufferedOutputStream(fout);
-
-            String running_thread = currentThread().getId() + "| Action : " + action + " : " + file_to_read;
-            jcb.addItem(running_thread);
 
             String fileLen = din.readUTF();
             long file_length = new Long(fileLen);
@@ -304,9 +331,12 @@ public class FTPClient extends Thread {
                 bout.write(contents, 0, byte_to_read);
                 current += byte_to_read;
                 sleep(100);
-
                 caculateTime(current, file_length, size);
             }
+            // Close component
+            showOrCloseComponent("close");
+            ClientFrm.countThread--;
+            setJtaData("Received completed");
             istream.close();
             bout.close();
             fout.close();
