@@ -185,7 +185,7 @@ public class FTPServer extends Thread {
 
             // Init to write log
             String status = "Reject";
-            String file_action = "upload file";
+            String file_action = "Dowload file";
 
             boolean is_allow_file = false;
             File file_to_send = new File(file_to_send_path);
